@@ -173,6 +173,17 @@ standalone loop (`adaptation.pt`) cannot resume this native trainer.
 
 ## Kaggle notebook
 
+Both notebooks run `scripts/check_kaggle_access.py` before training. It reads and
+decodes every image in the selected splits, reads existing source/evaluation
+labels (never adaptation labels), and checks output write/read/delete access.
+It reports exact failing paths and exits with an error if checks fail. This
+checks the current runtime mount; a later session or mount failure remains possible.
+You can also run it directly after installing dependencies:
+
+```bash
+python scripts/check_kaggle_access.py --root /kaggle/input/datasets/doquocbinhbinh/adaptiverdd-prepared --output /kaggle/working/GRL_RDD26/runs
+```
+
 For the GitHub workflow, upload the contents of this project folder to the root
 of [GRL_RDD26](https://github.com/binhdoquoc/GRL_RDD26) (so `train.py`, `grl_yolo/`
 and `configs/` are directly at the repository root). Do not upload datasets,

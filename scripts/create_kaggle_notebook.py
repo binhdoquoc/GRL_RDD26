@@ -68,7 +68,8 @@ files = ["train.py", "requirements.txt", "pyproject.toml", "pytest.ini", "README
          "grl_yolo/config.py", "grl_yolo/model.py", "grl_yolo/trainer.py", "grl_yolo/data.py",
          "grl_yolo/kaggle.py", "grl_yolo/environment.py", "grl_yolo/process.py",
          "tests/test_adaptation.py", "tests/test_domain_loss.py", "tests/test_native_trainer.py",
-         "tests/test_environment.py", "tests/test_process.py"]
+         "tests/test_environment.py", "tests/test_process.py", "tests/test_kaggle_access.py",
+         "scripts/check_kaggle_access.py"]
 embedded = {name: (PROJECT / name).read_text(encoding="utf-8") for name in files}
 code("PROJECT_FILES = " + repr(embedded) + "\n\n" + dedent("""
     PROJECT_DIR.mkdir(parents=True, exist_ok=True)
@@ -148,6 +149,18 @@ code("""
     if RUN_TESTS:
         subprocess.run([str(PYTHON), "-m", "pytest", "-q"], cwd=PROJECT_DIR,
                        env={**ENV, "OMP_NUM_THREADS": "2", "MKL_NUM_THREADS": "2"}, check=True)
+""")
+markdown("""
+    ## Required file access check before training
+    This reads and decodes every source, adaptation, validation and optional test image,
+    reads existing source/evaluation labels, and checks output write/read/delete access.
+    Target adaptation labels are never read. It may take a few minutes for a large dataset.
+    A failure stops this cell with the actual path and error; resolve it before training.
+""")
+code("""
+    run_project(["scripts/check_kaggle_access.py", "--root", root,
+                 "--output", PROJECT_DIR / "runs", "--target", TARGET_SPLIT,
+                 "--validation", VALIDATION_SPLIT, "--test", TEST_SPLIT])
 """)
 markdown("""
     ## 3. Write dataset YAML with the exact input paths
