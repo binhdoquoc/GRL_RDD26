@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "yolo11s-grl"
+version = "0.1.0"
+description = "Local multiscale GRL extension for native Ultralytics YOLO11 training"
+requires-python = ">=3.10,<3.13"
+dependencies = ["ultralytics==8.3.0", "torch==2.5.1", "torchvision==0.20.1", "numpy<2"]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<9"]
+
+[project.scripts]
+yolo11s-grl = "grl_yolo.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["grl_yolo*"]

@@ -1,0 +1,12 @@
+# Replace this root with your dataset location. Paths below are relative to it.
+path: /kaggle/input/datasets/doquocbinhbinh/adaptiverdd-prepared
+train: source/images
+val: target_eval/images
+test: target_test/images
+# Used only by this project's adaptation loader; labels are never read.
+target: target_adaptation/images
+names:
+  0: D00
+  1: D10
+  2: D20
+  3: D40

@@ -1,0 +1,25 @@
+# Architecture/GRL: model YAML. Dataset: data YAML.
+# Omitted keys, including project/name, inherit Ultralytics defaults.
+train:
+  model: yolo11s-grl.yaml
+  pretrained: yolo11s.pt  # automatically downloaded if absent
+  data: adaptiverdd.yaml
+  # Optional experiment overrides:
+  # epochs: 100
+  # batch: 4
+  # imgsz: 640
+  # device: 0
+  # workers: 2
+  # optimizer: auto
+  # lr0: 0.01
+  # weight_decay: 0.0005
+  # mosaic: 1.0
+  # mixup: 0.0
+  # close_mosaic: 10
+  # project: ../runs/custom
+  # name: experiment
+
+# Optional GRL overrides per experiment:
+# grl:
+#   lambda: 0.2
+#   domain_weight: 0.5
