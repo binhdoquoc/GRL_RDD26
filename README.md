@@ -44,7 +44,7 @@ grl:
   groups: 8
   lambda: 0.1
   domain_weight: 1.0
-  schedule: constant
+  schedule: dann
 ```
 
 The local extension registers a classifier for each tapped feature map. Each
@@ -172,6 +172,17 @@ a fresh run initialized from its detector weights. Checkpoints from the older
 standalone loop (`adaptation.pt`) cannot resume this native trainer.
 
 ## Kaggle notebook
+
+For **baseline only**, import `kaggle_baseline_only.ipynb`. Set `GRL_RUN_DIR` to
+the completed GRL run folder containing `args.yaml` and `configuration.yaml`.
+In a new session, attach those saved outputs as a Kaggle input. The repository
+helper `scripts/run_baseline.py` copies resolved training parameters and the
+original pretrained initialization, disables GRL and starts a fresh native run.
+If original architecture/data paths no longer exist, supply copies using
+`ORIGINAL_MODEL_YAML` and `ORIGINAL_DATA_YAML`. Preserve their original contents
+and adjust only dataset mount paths when necessary. Copied settings and explicit
+path replacements are recorded in `baseline_settings_copy.json`. The existing
+clone notebook remains unchanged.
 
 Both notebooks run `scripts/check_kaggle_access.py` before training. It reads and
 decodes every image in the selected splits, reads existing source/evaluation

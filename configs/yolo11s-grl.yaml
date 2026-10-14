@@ -38,4 +38,4 @@ grl:
   groups: 8
   lambda: 0.1
   domain_weight: 1.0
-  schedule: constant
+  schedule: dann
