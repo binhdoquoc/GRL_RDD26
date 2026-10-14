@@ -18,7 +18,7 @@ def test_notebook_uses_updated_kaggle_bootstrap():
     assert 'TORCH_INDEX_URL = "https://pypi.org/simple"' in code
     assert '"--system-site-packages"' not in code
     assert 'sys.executable, "-m", "venv"' not in code
-    assert '"grl_yolo/environment.py"' in code or "'grl_yolo/environment.py'" in code
+    assert "sync_repository()" in code
 
 
 def test_explicit_notebook_paths_bypass_discovery_and_read_samples(tmp_path, monkeypatch, capsys):
@@ -69,7 +69,7 @@ def test_notebook_writes_exact_paths_without_directory_access_gate(tmp_path, mon
     assert data["test"] == str(root / "target_test/images")
 
 
-def test_notebook_embeds_current_sources_and_code_parses(tmp_path):
+def test_notebook_fetches_github_and_code_parses(tmp_path):
     notebook = json.loads((PROJECT / "kaggle_yolo11s_grl.ipynb").read_text(encoding="utf-8"))
     assert notebook["nbformat"] == 4
     assert notebook["nbformat_minor"] == 5
@@ -89,15 +89,11 @@ def test_notebook_embeds_current_sources_and_code_parses(tmp_path):
                 for t in node.targets
             ):
                 ast.parse(ast.literal_eval(node.value))
-    embedded_cell = next(c for c in cells if c.startswith("PROJECT_FILES ="))
-    embedded = ast.literal_eval(ast.parse(embedded_cell).body[0].value)
-    for filename, contents in embedded.items():
-        assert (PROJECT / filename).read_text(encoding="utf-8") == contents
-    # Execute the extraction cell and verify it really restores a usable project.
-    namespace = {"PROJECT_DIR": tmp_path / "project"}
-    exec(compile(embedded_cell, "notebook-bootstrap", "exec"), namespace)
-    assert (tmp_path / "project/train.py").is_file()
-    assert (tmp_path / "project/grl_yolo/kaggle.py").is_file()
+    assert not any(c.startswith("PROJECT_FILES =") for c in cells)
+    bootstrap = next(c for c in cells if "def sync_repository():" in c)
+    assert '"fetch", "origin", REPO_REF or "HEAD"' in bootstrap
+    launcher = next(c for c in cells if "def run_project(arguments):" in c)
+    assert "sync_repository()" in launcher
 
 
 def test_dataset_discovery_nested_layout_and_ambiguity(tmp_path):

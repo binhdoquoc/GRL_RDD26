@@ -382,32 +382,72 @@ settings = "".join(clone_cells[1]["source"]).replace(
     'REPO_DIR = Path("/kaggle/working/GRL_RDD26")\n'
     'PROJECT_DIR = REPO_DIR  # project files are at the repository root')
 clone_cells[1]["source"] = settings.splitlines(True)
-clone_cells[2]["source"] = ["## 1. Clone the project\n",
-    "Reruns reuse the checkout and preserve edited YAML and results. To update code, "
-    "start a fresh session or explicitly update the checkout before setup.\n"]
+clone_cells[2]["source"] = ["## 1. Fetch the project from GitHub\n",
+    "Setup and every new training command fetch the selected remote revision. "
+    "Existing run outputs and untracked experiment YAML are preserved. "
+    "Tracked local edits stop the update; make code changes in GitHub instead.\n"]
 clone_cells[3]["metadata"] = {}
 clone_cells[3]["source"] = dedent('''
-    if not REPO_DIR.exists():
-        subprocess.run(["git", "clone", REPO_URL, str(REPO_DIR)], check=True)
-        if REPO_REF:
-            subprocess.run(["git", "checkout", REPO_REF], cwd=REPO_DIR, check=True)
-    elif not (REPO_DIR / ".git").is_dir():
-        raise RuntimeError(f"Existing path is not a Git checkout: {REPO_DIR}")
-    if REPO_REF:
-        wanted = subprocess.check_output(["git", "rev-parse", REPO_REF], cwd=REPO_DIR, text=True).strip()
-        actual = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO_DIR, text=True).strip()
-        if actual != wanted:
-            raise RuntimeError("Existing checkout differs from REPO_REF. Start a fresh session or update it explicitly.")
-    if not (PROJECT_DIR / "train.py").is_file():
-        raise FileNotFoundError("The cloned revision lacks train.py at the repository root. Upload the project contents, then select that revision.")
-    print("Project:", PROJECT_DIR)
-    print("Revision:", subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO_DIR, text=True).strip())
-    PROJECT_FILES = [str(p.relative_to(PROJECT_DIR))
-                     for folder in ("grl_yolo", "configs", "scripts", "tests")
-                     for p in (PROJECT_DIR / folder).rglob("*")
-                     if p.is_file() and p.suffix in {".py", ".yaml"}]
-    PROJECT_FILES += ["train.py", "requirements.txt", "pyproject.toml", "pytest.ini", "README.md"]
+    def sync_repository():
+        global PROJECT_FILES
+        if not REPO_DIR.exists():
+            subprocess.run(["git", "clone", REPO_URL, str(REPO_DIR)], check=True)
+        elif not (REPO_DIR / ".git").is_dir():
+            raise RuntimeError(f"Existing path is not a Git checkout: {REPO_DIR}")
+        origin = subprocess.check_output(["git", "remote", "get-url", "origin"], cwd=REPO_DIR, text=True).strip()
+        if origin.removesuffix(".git") != REPO_URL.removesuffix(".git"):
+            raise RuntimeError(f"Existing checkout belongs to a different repository: {origin}")
+        dirty = subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=REPO_DIR, text=True)
+        if dirty.strip():
+            raise RuntimeError("Tracked local edits would affect this run. Update code in GitHub and use a clean checkout. No files were discarded.\\n" + dirty)
+        # HEAD resolves the remote default branch, even from a detached local checkout.
+        subprocess.run(["git", "fetch", "origin", REPO_REF or "HEAD"], cwd=REPO_DIR, check=True)
+        revision = subprocess.check_output(["git", "rev-parse", "FETCH_HEAD"], cwd=REPO_DIR, text=True).strip()
+        subprocess.run(["git", "checkout", "--detach", revision], cwd=REPO_DIR, check=True)
+        if not (PROJECT_DIR / "train.py").is_file():
+            raise FileNotFoundError("The downloaded revision lacks train.py at the repository root.")
+        print("Project:", PROJECT_DIR)
+        print("GitHub revision used:", revision)
+        PROJECT_FILES = [str(p.relative_to(PROJECT_DIR))
+                         for folder in ("grl_yolo", "configs", "scripts", "tests")
+                         for p in (PROJECT_DIR / folder).rglob("*")
+                         if p.is_file() and p.suffix in {".py", ".yaml"}]
+        PROJECT_FILES += ["train.py", "requirements.txt", "pyproject.toml", "pytest.ini", "README.md"]
+        return revision
+
+    sync_repository()
 ''').strip().splitlines(True)
+# Refresh immediately before launching training, even if setup was run earlier.
+for cell in clone_cells:
+    source = "".join(cell["source"])
+    if cell["cell_type"] == "code" and "TRAINING_YAML =" in source:
+        source = dedent('''
+            # Experiment settings live in GitHub, not an embedded notebook template.
+            TRAIN_CONFIG = PROJECT_DIR / "configs/train.yaml"
+            print("Repository training configuration:", TRAIN_CONFIG)
+            print(TRAIN_CONFIG.read_text())
+            print("Kaggle dataset override:", DATA_CONFIG)
+        ''').strip()
+    if cell["cell_type"] == "markdown" and "## 4." in source:
+        source = "## 4. Review repository training settings\nEdit configs/train.yaml and configs/yolo11s-grl.yaml in GitHub. Training loads those files after fetching the remote revision; this notebook supplies only the Kaggle dataset path and GPU selection.\n"
+    if cell["cell_type"] == "code" and 'command = ["train.py", "--config", TRAIN_CONFIG' in source:
+        source = source.replace('"--config", TRAIN_CONFIG, "--report"',
+                                '"--config", TRAIN_CONFIG, "--data", DATA_CONFIG, "--device", "0", "--report"')
+    if cell["cell_type"] == "code" and 'if RUN_BASELINE:' in source:
+        source = source.replace('"--config", TRAIN_CONFIG, "--baseline"',
+                                '"--config", TRAIN_CONFIG, "--data", DATA_CONFIG, "--device", "0", "--baseline"')
+    if cell["cell_type"] == "code" and "def run_project(arguments):" in source:
+        source = source.replace("global COMMAND_NUMBER", "global COMMAND_NUMBER, PYTHON, ENV")
+        source = source.replace("COMMAND_NUMBER += 1", dedent('''
+            if str(arguments[0]) in {"train.py", "scripts/run_baseline.py"}:
+                sync_repository()
+                importlib.reload(training_environment)
+                PYTHON, ENV = training_environment.prepare_environment(PROJECT_DIR, torch_index=TORCH_INDEX_URL)
+            COMMAND_NUMBER += 1
+        ''').strip().replace("\n", "\n    "))
+    cell["source"] = source.splitlines(True)
 clone_output = PROJECT / "kaggle_yolo11s_grl_clone.ipynb"
 clone_output.write_text(json.dumps(clone_notebook, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+# Both public entry names use GitHub; do not ship a stale embedded-code notebook.
+output.write_text(clone_output.read_text(encoding="utf-8"), encoding="utf-8")
 print(clone_output)

@@ -204,14 +204,24 @@ repository. Set
 optionally `REPO_REF` (branch, tag or commit), attach the dataset, enable GPU and
 Internet, and run in order. An empty ref clones the repository default branch.
 The notebook prints the checked-out commit, uses the local extension from that
-checkout, and reuses it on reruns without pulling over edited configuration.
-Use a fresh session to fetch an updated version. Results remain in the project's
+checkout. Setup and every new training command fetch the selected GitHub revision
+and print its commit; the CLI prints the resolved GRL settings. Tracked local edits
+stop the update rather than being discarded. Existing run outputs and untracked
+experiment YAML are preserved. Results remain in the project's
 native `runs/detect` folders and are packaged into the downloadable results ZIP.
 
 Import `kaggle_yolo11s_grl.ipynb`, attach the dataset, enable GPU and Internet,
-and run in order. It restores local extension files, installs pinned dependencies
-if needed, loads `configs/yolo11s-grl.yaml`, writes editable training YAML, trains,
-evaluates and packages the actual native run directories. No GitHub push is needed.
+and run in order. It fetches the same GitHub project, installs pinned dependencies
+if needed, loads repository `configs/train.yaml` and `configs/yolo11s-grl.yaml`, trains,
+evaluates and packages the actual native run directories. Both public notebook
+names now use this GitHub workflow; push repository changes before training.
+The notebook overrides only the Kaggle dataset YAML path and GPU selection.
+Hyperparameters and GRL settings come from the repository configuration files.
+Each fresh primary training command clears the previous local `runs/detect`
+experiment outputs. Download needed results before starting another experiment.
+The subsequent `--baseline` command preserves the current GRL outputs for comparison.
+Resume and custom project directories are not cleared. Inputs inside the old
+results folder must be copied elsewhere before starting a fresh experiment.
 
 It reads the supplied dataset paths directly and uses no symlink staging or
 custom directory-access gate. Optional file probes only print diagnostics.
@@ -222,8 +232,9 @@ Setup avoids ensurepip through uv and uses PyPI by default with custom-index
 fallback. It forces Matplotlib `Agg` for subprocesses and displays saved plots
 in the kernel. Training output is streamed and saved to `logs/train.log`.
 
-Regenerate both notebooks after notebook workflow changes (and the embedded
-version after local code/config changes):
+The notebook bootstrap is fixed after this correction. Future model/trainer and
+architecture YAML changes belong in GitHub and require no notebook regeneration.
+For maintenance of the bootstrap itself:
 
 ```bash
 python scripts/create_kaggle_notebook.py

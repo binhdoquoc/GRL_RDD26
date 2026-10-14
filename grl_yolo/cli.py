@@ -13,6 +13,7 @@ from ultralytics.utils import yaml_save
 
 from grl_yolo.config import load_training_config
 from grl_yolo.model import plain_detector
+from grl_yolo.outputs import clear_previous_results
 from grl_yolo.trainer import GRLTrainer
 
 
@@ -61,6 +62,8 @@ def main():
             overrides[key] = value
     if cli.baseline:
         grl["enabled"] = False
+    print("Effective GRL settings: " + json.dumps(grl, sort_keys=True), flush=True)
+    clear_previous_results(overrides, baseline=cli.baseline)
     if grl["enabled"] and grl["domain_weight"] > 0:
         trainer = GRLTrainer(overrides=overrides, grl=grl)
     else:
