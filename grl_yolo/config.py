@@ -29,8 +29,8 @@ def grl_settings(values=None):
 def load_training_config(filename):
     filename = Path(filename).resolve()
     raw = yaml.safe_load(filename.read_text(encoding="utf-8")) or {}
-    if set(raw) - {"train", "grl"}:
-        raise ValueError("Training YAML must contain only train and grl sections")
+    if set(raw) - {"train", "grl", "experiment"}:
+        raise ValueError("Training YAML must contain only train, grl and experiment sections")
     train = deepcopy(raw.get("train", {}))
     # Only supplied settings are overrides; all omitted keys come from Ultralytics.
     for key in ("data", "project"):
@@ -49,3 +49,17 @@ def load_training_config(filename):
         architecture = yaml.safe_load(Path(model).read_text(encoding="utf-8")) or {}
         architecture_grl = architecture.get("grl", {})
     return train, grl_settings({**architecture_grl, **(raw.get("grl") or {})})
+
+
+def experiment_seeds(filename):
+    raw = yaml.safe_load(Path(filename).read_text(encoding="utf-8")) or {}
+    experiment = raw.get("experiment")
+    if experiment is None:
+        return None
+    if not isinstance(experiment, dict) or set(experiment) != {"seeds"}:
+        raise ValueError("experiment must contain only seeds: [0, 1, 2]")
+    seeds = experiment["seeds"]
+    if (not isinstance(seeds, list) or not seeds or
+            any(type(seed) is not int or seed < 0 for seed in seeds) or len(set(seeds)) != len(seeds)):
+        raise ValueError("experiment.seeds must be a nonempty list of distinct nonnegative integers")
+    return seeds

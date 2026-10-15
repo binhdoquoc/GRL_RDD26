@@ -11,7 +11,8 @@ from ultralytics.models.yolo.detect import DetectionTrainer
 from ultralytics.nn.tasks import DetectionModel, attempt_load_one_weight
 from ultralytics.utils import yaml_save
 
-from grl_yolo.config import load_training_config
+from grl_yolo.config import experiment_seeds, load_training_config
+from grl_yolo.experiments import check_pair_settings, run_repeated, write_summary
 from grl_yolo.model import plain_detector
 from grl_yolo.outputs import clear_previous_results
 from grl_yolo.trainer import GRLTrainer
@@ -44,6 +45,17 @@ def export_checkpoints(trainer):
             save_detector(model, trainer.wdir / f"{name}_detector.pt", model.args)
 
 
+def train_once(overrides, grl):
+    if grl["enabled"] and grl["domain_weight"] > 0:
+        trainer = GRLTrainer(overrides=overrides, grl=grl)
+    else:
+        trainer = DetectionTrainer(overrides=overrides)
+    yaml_save(trainer.save_dir / "configuration.yaml", {"train": overrides, "grl": grl})
+    trainer.train()
+    export_checkpoints(trainer)
+    return trainer
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default="configs/train.yaml")
@@ -63,17 +75,23 @@ def main():
     if cli.baseline:
         grl["enabled"] = False
     print("Effective GRL settings: " + json.dumps(grl, sort_keys=True), flush=True)
+    seeds = experiment_seeds(cli.config)
+    if seeds is not None and overrides.get("resume"):
+        raise ValueError("Remove experiment.seeds to resume one specific checkpoint")
+    adaptive = check_pair_settings(overrides, seeds, Path("notebook_run.json")) if cli.baseline and seeds is not None else []
+    # Clear once for the whole adaptive experiment, never between seeds or modes.
     clear_previous_results(overrides, baseline=cli.baseline)
-    if grl["enabled"] and grl["domain_weight"] > 0:
-        trainer = GRLTrainer(overrides=overrides, grl=grl)
+    if seeds is None:
+        trainer = train_once(overrides, grl)
+        save_dir, records = trainer.save_dir.resolve(), []
     else:
-        trainer = DetectionTrainer(overrides=overrides)
-    yaml_save(trainer.save_dir / "configuration.yaml", {"train": overrides, "grl": grl})
-    trainer.train()
-    export_checkpoints(trainer)
+        save_dir, records = run_repeated(overrides, grl, seeds, cli.baseline, train_once)
+        # The notebook packages each mode's primary folder recursively, including all seeds.
+        if adaptive:
+            write_summary(save_dir, adaptive + records)
     if cli.report:
-        Path(cli.report).write_text(json.dumps({"run_dir": str(trainer.save_dir.resolve())}), encoding="utf-8")
-    print(f"Results: {trainer.save_dir}")
+        Path(cli.report).write_text(json.dumps({"run_dir": str(save_dir), "seed_runs": records}), encoding="utf-8")
+    print(f"Results: {save_dir}")
 
 
 if __name__ == "__main__":

@@ -4,14 +4,14 @@ train:
   model: yolo11s-grl.yaml
   pretrained: yolo11s.pt  # automatically downloaded if absent
   data: adaptiverdd.yaml
+  optimizer: AdamW
+  lr0: 0.002
   # Optional experiment overrides:
   # epochs: 100
   # batch: 4
   # imgsz: 640
   # device: 0
   # workers: 2
-  # optimizer: auto
-  # lr0: 0.01
   # weight_decay: 0.0005
   # mosaic: 1.0
   # mixup: 0.0
@@ -23,3 +23,8 @@ train:
 # grl:
 #   lambda: 0.2
 #   domain_weight: 0.5
+
+# Each notebook training cell runs once per seed. Use [0] for a single seed.
+# RUN_BASELINE=True runs the matching baseline seeds in the next notebook cell.
+experiment:
+  seeds: [0, 1, 2]

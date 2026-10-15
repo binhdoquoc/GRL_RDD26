@@ -85,13 +85,16 @@ train:
   model: yolo11s-grl.yaml
   pretrained: yolo11s.pt
   data: adaptiverdd.yaml
+  optimizer: AdamW
+  lr0: 0.002
   # Optional overrides:
   # epochs: 100
   # batch: 4
   # imgsz: 640
   # device: 0
-  # lr0: 0.01
-  # optimizer: auto
+
+experiment:
+  seeds: [0, 1, 2]  # use [0] for one adaptive/baseline pair
 ```
 
 Paths to local model/data files resolve relative to the training YAML.
@@ -99,8 +102,9 @@ Paths to local model/data files resolve relative to the training YAML.
 transferred into the YAML-defined model. Set `pretrained: false` for random
 initialization, or supply a compatible local checkpoint.
 
-All omitted training settings retain Ultralytics 8.3.0 defaults, including
-optimizer, loss gains, warmup, LR scheduling, AMP, EMA, augmentation, early
+The supplied experiment explicitly uses AdamW and lr0=0.002. All other omitted
+training settings retain Ultralytics 8.3.0 defaults, including
+loss gains, warmup, LR scheduling, AMP, EMA, augmentation, early
 stopping, validation and output-directory naming. Source and target both use
 the native YOLODataset augmentation pipeline, including mosaic closure.
 `batch` is the source batch size plus a target batch of the same configured size.
@@ -112,6 +116,26 @@ overrides; these take precedence over the model YAML's GRL settings. Existing
 training configs with inline GRL settings remain supported.
 
 ## 4. Train
+
+The default `experiment.seeds: [0, 1, 2]` repeats adaptive training three times.
+In Kaggle set `RUN_BASELINE = True`; the next cell repeats the matching baselines
+for the same seeds, using the same source settings and initial pretrained weights.
+Changing the YAML to `seeds: [0]` runs one of each. No augmentation changes are added.
+Each seed initializes a fresh trainer and optimizer. The current GRL schedule
+remains DANN with maximum lambda 0.1 and domain_weight 1.0.
+
+The first seed uses the native run directory (normally `runs/detect/train` for
+adaptive and `train2` for baseline). Additional seeds live inside that directory's
+`seeds/<seed>/` subtree so the fixed notebook's recursive download includes every
+run. Each mode writes `seed_runs.json`, `seed_results.csv` and `seed_summary.csv`.
+The baseline summary also includes the adaptive runs when their seed list matches
+the current `notebook_run.json`. The summary reports mean and sample standard
+deviation; standard deviation is blank for a single seed. Each best detector is
+evaluated on `test`, or `val` when no test split exists. The notebook's existing
+plots/evaluation cells display the first seed; use the CSV summaries for all seeds.
+Old results are cleared once before the adaptive sweep, never between seeds or
+before its following baseline sweep. Removing the `experiment` section restores
+the ordinary single-run CLI, including checkpoint resume support.
 
 ```bash
 yolo11s-grl --config configs/train.yaml
