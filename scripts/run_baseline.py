@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 
 
-def prepare_config(run, project, data=None, model=None):
+def prepare_config(run, project, data=None, model=None, destination=None):
     args = yaml.safe_load((run / "args.yaml").read_text())
     saved = yaml.safe_load((run / "configuration.yaml").read_text())
     if not saved.get("grl", {}).get("enabled", False):
@@ -36,10 +36,11 @@ def prepare_config(run, project, data=None, model=None):
     for key in ("project", "name", "resume", "exist_ok", "save_dir"):
         training.pop(key, None)
     training["resume"] = False
-    output = project / "configs/baseline_from_grl.yaml"
+    destination = Path(destination) if destination is not None else project
+    output = destination / "configs/baseline_from_grl.yaml"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(yaml.safe_dump({"train": training, "grl": {"enabled": False}}, sort_keys=False))
-    (project / "baseline_settings_copy.json").write_text(json.dumps({
+    (destination / "baseline_settings_copy.json").write_text(json.dumps({
         "source_run": str(run.resolve()), "path_overrides": changes,
         "copied_settings": training,
         "note": "GRL disabled; new run with native output naming; original pretrained initialization retained."

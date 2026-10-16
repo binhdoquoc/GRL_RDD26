@@ -7,3 +7,5 @@ runs/
 *.egg-info/
 .ultralytics/
 .matplotlib/
+baseline_seed_settings/
+baseline_only_seeds_report.json

@@ -197,6 +197,21 @@ standalone loop (`adaptation.pt`) cannot resume this native trainer.
 
 ## Kaggle notebook
 
+To run **baselines only with the repository experiment settings**, use
+`Kaggle_BASELINE_ONLY_Same_GRL_Seeds.ipynb`. This is a separate new notebook;
+the existing notebooks are unchanged. Push `scripts/run_baseline_seeds.py` and
+the updated `scripts/run_baseline.py` first.
+The notebook needs only the original image dataset. It reads `configs/train.yaml`
+and `experiment.seeds` directly from GitHub; no saved result path is required.
+Keep the same repository training settings as the adaptive experiment. Use
+`experiment.seeds: [0]` for one baseline. It preserves native defaults and the
+original pretrained initialization, disables GRL and runs baseline training only.
+The script still supports `--adaptive-root` as an optional alternative when you
+want to reproduce older saved settings that differ from current repository YAML.
+Results are in `runs/detect/BASELINE_ONLY/seed_0`, `seed_1`, `seed_2`, with native
+numbering for another invocation. Adaptive results are preserved. Summary CSVs,
+copied-setting audits, checkpoints and a downloadable result archive are included.
+
 For **baseline only**, import `kaggle_baseline_only.ipynb`. Set `GRL_RUN_DIR` to
 the completed GRL run folder containing `args.yaml` and `configuration.yaml`.
 In a new session, attach those saved outputs as a Kaggle input. The repository
