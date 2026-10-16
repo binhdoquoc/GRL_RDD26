@@ -6,6 +6,14 @@ train:
   data: adaptiverdd.yaml
   optimizer: AdamW
   lr0: 0.002
+  # Shared augmentations for adaptive source/target and baseline source images.
+  hsv_v: 0.55
+  scale: 0.7
+  perspective: 0.0004
+  degrees: 5.0
+  close_mosaic: 20
+  fliplr: 0.5
+  flipud: 0.0
   # Optional experiment overrides:
   # epochs: 100
   # batch: 4
@@ -15,7 +23,6 @@ train:
   # weight_decay: 0.0005
   # mosaic: 1.0
   # mixup: 0.0
-  # close_mosaic: 10
   # project: ../runs/custom
   # name: experiment
 

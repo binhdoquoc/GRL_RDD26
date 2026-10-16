@@ -67,7 +67,8 @@ def make_data(root):
 
 def test_target_uses_native_augmentation_with_empty_labels(tmp_path):
     make_data(tmp_path)
-    cfg = get_cfg(overrides={"imgsz": 64})
+    overrides, _ = load_training_config(Path(__file__).resolve().parents[1] / "configs/train.yaml")
+    cfg = get_cfg(overrides={**overrides, "imgsz": 64})
     data = {"names": {0: "damage"}, "nc": 1}
     source = build_yolo_dataset(deepcopy(cfg), str(tmp_path / "source/images"), 2, data)
     target = UnlabeledYOLODataset(img_path=str(tmp_path / "target/images"), imgsz=64,

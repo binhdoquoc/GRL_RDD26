@@ -87,6 +87,13 @@ train:
   data: adaptiverdd.yaml
   optimizer: AdamW
   lr0: 0.002
+  hsv_v: 0.55
+  scale: 0.7
+  perspective: 0.0004
+  degrees: 5.0
+  close_mosaic: 20
+  fliplr: 0.5
+  flipud: 0.0
   # Optional overrides:
   # epochs: 100
   # batch: 4
@@ -102,7 +109,10 @@ Paths to local model/data files resolve relative to the training YAML.
 transferred into the YAML-defined model. Set `pretrained: false` for random
 initialization, or supply a compatible local checkpoint.
 
-The supplied experiment explicitly uses AdamW and lr0=0.002. All other omitted
+The supplied experiment explicitly uses AdamW, lr0=0.002 and the shared
+augmentation overrides above. Adaptive source/target and baseline source images
+use these settings, including disabling mosaic for the final 20 epochs.
+All other omitted
 training settings retain Ultralytics 8.3.0 defaults, including
 loss gains, warmup, LR scheduling, AMP, EMA, augmentation, early
 stopping, validation and output-directory naming. Source and target both use
@@ -120,7 +130,7 @@ training configs with inline GRL settings remain supported.
 The default `experiment.seeds: [0, 1, 2]` repeats adaptive training three times.
 In Kaggle set `RUN_BASELINE = True`; the next cell repeats the matching baselines
 for the same seeds, using the same source settings and initial pretrained weights.
-Changing the YAML to `seeds: [0]` runs one of each. No augmentation changes are added.
+Changing the YAML to `seeds: [0]` runs one of each. Both modes share the configured augmentations.
 Each seed initializes a fresh trainer and optimizer. The current GRL schedule
 remains DANN with maximum lambda 0.1 and domain_weight 1.0.
 
@@ -196,6 +206,15 @@ a fresh run initialized from its detector weights. Checkpoints from the older
 standalone loop (`adaptation.pt`) cannot resume this native trainer.
 
 ## Kaggle notebook
+
+For **all six trainings in one notebook**, use
+`Kaggle_ADAPTIVE_AND_BASELINE_3Seeds.ipynb`. Both stages are enabled by default:
+adaptive seeds 0, 1, 2 followed by baseline seeds 0, 1, 2. Run all cells once.
+Settings and seed count come from repository `configs/train.yaml`. The baseline
+stage pins the Git commit used by adaptive training, so a later push cannot
+silently change its parameters. GPU/Internet and the original image dataset are
+required. All seed outputs and summary CSVs are included in the final download.
+This is a separate notebook; the frozen main notebook remains unchanged.
 
 To run **baselines only with the repository experiment settings**, use
 `Kaggle_BASELINE_ONLY_Same_GRL_Seeds.ipynb`. This is a separate new notebook;

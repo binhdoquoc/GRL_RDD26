@@ -118,8 +118,12 @@ def test_new_notebook_has_no_adaptive_training_command():
 
 
 def test_repository_configuration_needs_no_adaptive_results(tmp_path):
+    from grl_yolo.config import load_training_config
+    from ultralytics.cfg import get_cfg
     project = Path(__file__).resolve().parents[1]
     filename = project / "configs/train.yaml"
+    adaptive, _ = load_training_config(filename)
+    adaptive = vars(get_cfg(overrides={**adaptive, "device": 0}))
     plan = prepare_repository_configs(filename, tmp_path)
     assert [r["seed"] for r in plan] == [0, 1, 2]
     for row in plan:
@@ -131,4 +135,6 @@ def test_repository_configuration_needs_no_adaptive_results(tmp_path):
         assert args["pretrained"] == "yolo11s.pt"
         assert config["grl"]["enabled"] is False
         assert row["source_run"] is None
+        for key in ("hsv_v", "scale", "perspective", "degrees", "close_mosaic", "fliplr", "flipud"):
+            assert args[key] == adaptive[key]
     assert len(prepare_repository_configs(filename, tmp_path, seeds=[0])) == 1
